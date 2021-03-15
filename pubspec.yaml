@@ -1,0 +1,11 @@
+name: minikanren_dart
+description: A MiniKanren Implementation for Dart.
+# version: 1.0.0
+# homepage: https://github.com/DeborahFehr/MiniKanren-Dart
+# author: Deborah Fehr <deborah.fehr@student.uni-tuebingen.de>
+
+environment:
+  sdk: '>=2.5.0 <3.0.0'
+
+dependencies:
+  test: ^1.16.7
