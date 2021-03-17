@@ -1,15 +1,15 @@
 //import 'package:minikanren_dart/minikanren_dart.dart' as minikanren_dart;
 
-import '../lib/minikanren_dart.dart';
+import 'package:minikanren_dart/minikanren_dart.dart';
+
+//import '../lib/minikanren_dart.dart';
 
 main(List<String> arguments) {
   print('Hello world:!');
-  // ${minikanren_dart.calculate()}
-  var bla =
-      disj2(mEquals(MVar('olive'), MVar('x')), mEquals(MVar('oil'), MVar('x')))(
-          empty_s);
-  print(mEquals(MVar('olive'), MVar('x')));
-}
+  print(mEquals({2: MVar('x')}, {2: 3})(empty_s));
+  print(mEquals({MVar('y'): 3}, {2: 3})(Substitution([
+    {MVar('x'): 3}
+  ])));
 
 /*
 Implementation of appendo
@@ -67,3 +67,4 @@ And Syntax Rules:
 // bit-xor
 // bit-and
 // bit-nand
+}

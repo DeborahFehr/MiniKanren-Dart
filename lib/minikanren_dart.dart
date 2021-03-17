@@ -30,7 +30,7 @@ bool isMVar(Object obj) {
 
 // An Association is a pair where the first Value is a
 // Variable and the second one can be anything
-// We implement this as a Map<Var, Dynamic>
+// Association: Map<Var, Dynamic>
 
 // A substitution is a list of associations
 class Substitution {
@@ -55,6 +55,8 @@ class Substitution {
   String toString() {
     return this.associations.toString();
   }
+
+  Substitution.clone(Substitution sub) : this(new List.from(sub.associations));
 
   @override
   bool operator ==(other) {
@@ -84,6 +86,7 @@ class Substitution {
 }
 
 // empty-list constant
+// todo const?
 Substitution empty_s = Substitution.empty();
 
 // returns the association pair
@@ -107,6 +110,7 @@ dynamic walk(dynamic val, Substitution sub) {
       } else {
         return recursion;
       }
+      //}
     } else {
       assoc = val;
     }
@@ -178,13 +182,13 @@ dynamic unify(dynamic u, dynamic v, Substitution sub) {
 }
 
 // A stream is a list (empty list or list of substitutions)
+// Stream: List<Substitution>
 // A suspension is a function which returns a list of suspensions (stream)
+// Suspension:  List<Substitution> Function ()
 
 // A goal is a function that expects a substitution
 // and returns a stream of substitutions
-
-// https://www.tutorialspoint.com/dart_programming/dart_programming_typedef.htm
-// typedef Goal = MkStream Function(State sc);
+// Goal: List<Substitution> Function (Substitution sub)
 
 Function s_succeed() {
   return (Substitution s) => [s];
@@ -195,94 +199,61 @@ Function u_fail() {
 }
 
 Function mEquals(dynamic u, dynamic v) {
-  dynamic unifyResult = unify(u, v, Substitution.empty());
-  if (unifyResult != false) {
-    return (s) => [unifyResult];
-  }
-  return (s) => [];
+  return (Substitution s) {
+    dynamic unifyResult = unify(u, v, s);
+    if (unifyResult != false) {
+      Substitution result = unifyResult;
+      return [result];
+    }
+    return [];
+  };
 }
 
-// append-inf produces a stream
-dynamic append_inf(dynamic s, dynamic t) {
-  if (t == null) return t;
-  if (s is List) {
-    return [s.elementAt(0), append_inf(s.removeAt(0), t)];
-  } else {
-    return () => append_inf(t, s);
+// append-inf expects streams and produces a stream
+// no List<Substitution> as empty list cannot be passed
+dynamic append_inf(List s, List t) {
+  if (s.isEmpty) return t;
+  if (s is List && s.isNotEmpty) {
+    var recursion = append_inf(s.sublist(1), t);
+    if (recursion is List && recursion.isNotEmpty) recursion = recursion.first;
+    if (recursion is List && recursion.isEmpty) return [s.elementAt(0)];
+    return [s.elementAt(0), recursion];
+    // sublist(1) removes first element
   }
-
-/*
-(define (append-inf s-inf t-inf)
-  (cond
-    ((null? s-inf) t-inf)
-    ((pair? s-inf) 
-     (cons (car s-inf)
-       (append-inf (cdr s-inf) t-inf)))
-    (else (lambda () 
-            (append-inf t-inf (s-inf))))))
-*/
+  return () => append_inf(t, s);
 }
 
 // models or and returns a stream
-dynamic disj2(dynamic g1, dynamic g2) {
-  return (s) => append_inf([g1, s], [g2, s]);
-/*
-(define (disj2 g1 g2)
-  (lambda (s)
-    (append-inf (g1 s) (g2 s))))
-*/
+dynamic disj2(Function g1, Function g2) {
+  return (Substitution s) {
+    Substitution sCopy = Substitution.clone(s);
+    return append_inf(g1(s), g2(sCopy));
+  };
 }
 
 //
-dynamic append_map_inf(dynamic g, dynamic s) {
-  if (s == null) return s;
-  if (s is List) {
-    return append_inf([g, s.elementAt(0)], append_map_inf(g, s.removeAt(0)));
-  } else {
-    return () => append_inf(g, [s]);
+dynamic append_map_inf(Function g, dynamic s) {
+  if (s is List && s.isEmpty) return [];
+  if (s is List && s.isNotEmpty) {
+    return append_inf(g(s.elementAt(0)), append_map_inf(g, s.sublist(1)));
   }
-
-/*
-(define (append-map-inf g s-inf)
-  (cond
-    ((null? s-inf) '())
-    ((pair? s-inf)
-     (append-inf (g (car s-inf))
-       (append-map-inf g (cdr s-inf))))
-    (else (lambda () 
-            (append-map-inf g (s-inf))))))
-*/
+  return () => append_map_inf(g, [s]);
 }
 
 // models and and returns a stream
-dynamic conj2(dynamic g1, dynamic g2) {
-  return (s) => append_map_inf(g2, [g1, s]);
-/*
-(define (conj2 g1 g2)
-  (lambda (s)
-    (append-map-inf g2 (g1 s))))
-*/
+dynamic conj2(Function g1, Function g2) {
+  return (Substitution s) => append_map_inf(g2, g1(s));
 }
 
 //
 dynamic call_fresh(dynamic name, Function f) {
   return f(MVar(name));
-/*
-(define (call/fresh name f)
-  (f (var name)))
-*/
 }
 
 // returns reified value (underscore natural number)
 // strings are naturally immutable in dart
 dynamic reify_name(int n) {
   return "_" + n.toString();
-/*
-(define (reify-name n)
-  (string->symbol
-    (string-append "_"
-      (number->string n))))
-*/
 }
 
 //
@@ -296,31 +267,43 @@ dynamic walk_star(dynamic val, Substitution sub) {
       walk_star(walkedVal.keys.first, sub),
       walk_star(walkedVal.values.first, sub)
     ];
-  } else {
-    return walkedVal;
+  } else if (walkedVal is List) {
+    // dynamic list due to type inference
+    List<dynamic> recursionList = List.from(walkedVal);
+    for (int i = 0; i < walkedVal.length; i++) {
+      if (isMVar(walkedVal[i])) {
+        var recursion = walk_star(walkedVal[i], sub);
+        if (recursion != false) {
+          recursionList.removeAt(i);
+          recursionList.insert(i, recursion);
+        }
+      }
+    }
+    return recursionList;
   }
 
-/*
-(define (walk* v s)
-  (let ((v (walk v s)))
-    (cond
-      ((var? v) v)
-      ((pair? v)
-       (cons
-         (walk* (car v) s)
-         (walk* (cdr v) s)))
-      (else v))))
-*/
+  return walkedVal;
 }
 
-//
+// number n and stream s, produces at most n values
+dynamic take_inf(int n, dynamic s) {
+  if (n < 1 || (s is List && s.isEmpty)) return [];
+  if (s is List && s.isNotEmpty) {
+    var recursion = take_inf(n - 1, s.sublist(1));
+    if (recursion is List && recursion.isEmpty) return s.first;
+    return [s.first, recursion];
+  }
+  return take_inf(n, [s]);
+}
+
+// expects value and empty reified name substitution
 dynamic reify_s(dynamic val, Substitution reisub) {
   dynamic walkedVal = walk(val, reisub);
 
   if (isMVar(walkedVal)) {
-    return {
-      val: {reify_name(reisub.associations.length): reisub.associations.length}
-    };
+    List<Map<MVar, dynamic>> newSub = reisub.associations;
+    newSub.add({val: reify_name(reisub.associations.length - 1)});
+    return Substitution(newSub);
   } else if (walkedVal is Map) {
     return [
       reify_s(walkedVal.keys.first, reisub),
@@ -329,74 +312,29 @@ dynamic reify_s(dynamic val, Substitution reisub) {
   } else {
     return reisub;
   }
-/*
-(define (reify-s v r)
-  (let ((v (walk v r)))
-    (cond
-      ((var? v)
-       (let ((n (length r)))
-         (let ((rn (reify-name n)))
-           (cons `(,v . ,rn) r))))
-      ((pair? v)
-       (let ((r (reify-s (car v) r)))
-         (reify-s (cdr v) r)))
-      (else r))))
-*/
 }
 
 //
 Function reify(dynamic val) {
   return (Substitution sub) {
-    dynamic walkedVal = walk(val, sub);
-    return walk_star(walkedVal, reify_s(walkedVal, empty_s));
+    dynamic walkedVal = walk_star(val, sub);
+    dynamic reifyVal = reify_s(walkedVal, empty_s);
+    return walk_star(walkedVal, reifyVal);
   };
-/*
-(define (reify v)
-  (lambda (s)
-    (let ((v (walk* v s)))
-      (let ((r (reify-s v empty-s)))
-        (walk* v r)))))
-*/
 }
 
 //
-Function take_inf(dynamic n, dynamic val) {
+dynamic run_goal(dynamic n, Function g) {
+  return take_inf(n, g(empty_s));
+}
+
+// gets goals and produces a goal
+dynamic ifte(Function g1, Function g2, Function g3) {
   return (Substitution sub) {
-    dynamic walkedVal = walk(val, sub);
-    return walk_star(walkedVal, reify_s(walkedVal, empty_s));
+    Substitution sCopy = Substitution.clone(sub);
+    var s_inf = g1(sub);
+    if (s_inf == null || (s_inf is List && s_inf.isEmpty)) return g3(sCopy);
+    if (s_inf is List && s_inf.isNotEmpty) return (append_map_inf(g2, s_inf));
+    return s_inf;
   };
-/*
-(define (take-inf n s-inf)
-  (cond
-    ((and n (zero? n)) '())
-    ((null? s-inf) '())
-    ((pair? s-inf) 
-     (cons (car s-inf)
-       (take-inf (and n (sub1 n))
-         (cdr s-inf))))
-    (else (take-inf n (s-inf)))))
-*/
-}
-
-//
-dynamic run_goal(dynamic g1, dynamic g2) {
-/*
-(define (run-goal n g)
-  (take-inf n (g empty-s)))
-*/
-}
-
-//
-dynamic ifte(dynamic g1, dynamic g2, dynamic g3) {
-/*
-(define (ifte g1 g2 g3)
-  (lambda (s)
-    (let loop ((s-inf (g1 s)))
-      (cond
-        ((null? s-inf) (g3 s))
-        ((pair? s-inf)
-         (append-map-inf g2 s-inf))
-        (else (lambda ()
-                (loop (s-inf))))))))
-*/
 }

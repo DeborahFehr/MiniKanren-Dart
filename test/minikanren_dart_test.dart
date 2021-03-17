@@ -22,7 +22,7 @@ void main() {
     expect(x.isEqual(y), false);
   });
 
-// TODO
+// TODO ?
   test('Substitution Tests', () {
     expect(isMVar(7), false);
     expect(isMVar(7), false);
@@ -63,10 +63,10 @@ void main() {
               {MVar('z'): 'a'},
               {MVar('x'): MVar('w')},
               {
-                MVar('w'): ['x', 'e', 'z']
+                MVar('w'): ['x', 'e', MVar('z')]
               }
             ])),
-        ['x', 'e', 'z']);
+        ['x', 'e', 'a']);
     expect(
         walk(
             w,
@@ -320,61 +320,46 @@ void main() {
 
   test('disj2 Tests', () {
     expect(
-        disj2(mEquals(MVar('olive'), MVar('x')),
-            mEquals(MVar('oil'), MVar('x')))(empty_s),
-        false);
+        disj2(mEquals('olive', x), mEquals('oil', x))(Substitution.empty()), [
+      Substitution([
+        {x: 'olive'}
+      ]),
+      Substitution([
+        {x: 'oil'}
+      ])
+    ]);
     expect(
-        disj2(mEquals(MVar('olive'), MVar('x')),
-            mEquals(MVar('oil'), MVar('x')))(empty_s),
-        false);
+        disj2(mEquals('olive', x), mEquals('oil', x))(Substitution([
+          {x: 'olive'}
+        ])),
+        [
+          Substitution([
+            {x: 'olive'}
+          ])
+        ]);
   });
-
-// [['x', 'olive']]
-// [['x', 'oil']]
-
-// [['x', 'olive']]
 
   test('conj2 Tests', () {
     expect(
-        conj2(mEquals(MVar('x'), MVar('olive')),
-            mEquals(MVar('olive'), MVar('x')))(Substitution([
-          {x: MVar('olive')}
+        conj2(mEquals(x, 'olive'), mEquals('olive', x))(Substitution([
+          {x: 'olive'}
         ])),
-        false);
+        [
+          Substitution([
+            {x: 'olive'}
+          ])
+        ]);
+
     expect(
         conj2(mEquals({2: x}, {2: 3}), mEquals({y: 3}, {2: 3}))(
             Substitution.empty()),
-        false);
+        [
+          Substitution([
+            {x: 3},
+            {y: 2}
+          ])
+        ]);
   });
-
-  //[['x', 'olive']]
-//[['y', 2], ['x', 3]]
-
-  test('Take Tests', () {
-    final take1 = disj2(mEquals({MVar('olive'): y}, {x: MVar('apple')}),
-        mEquals({MVar('oil'): y}, {x: MVar('panda')}))(empty_s);
-    expect(take_inf(2, take1), false);
-    expect(take_inf(20, take1), false);
-  });
-
-//  [[['x', 'olive'], ['y', 'apple']], [['x', 'oil'], ['y', 'panda']]]
-// for both
-
-  test('Ifte Tests', () {
-    expect(
-        ifte(mEquals(x, MVar('butterfly')), mEquals(u, MVar('cat')),
-            mEquals(v, MVar('dog')))(Substitution.empty()),
-        false);
-    expect(
-        ifte(mEquals(x, MVar('butterfly')), mEquals(u, MVar('cat')),
-            mEquals(v, MVar('dog')))(Substitution([
-          {x: MVar('lemon')}
-        ])),
-        false);
-  });
-
-// [['x', 'butterfly'], ['u', 'cat']]
-// [['x', 'lemon'], ['v', 'dog']]
 
   test('Walkstar Tests', () {
     expect(
@@ -385,7 +370,7 @@ void main() {
               {x: 'w'},
               {y: z}
             ])),
-        ['a']);
+        'a');
     expect(
         walk_star(
             w,
@@ -393,10 +378,22 @@ void main() {
               {x: 'b'},
               {z: y},
               {
-                w: ['x', 'e', z]
+                w: [x, 'e', z]
               }
             ])),
         ['b', 'e', y]);
+    expect(
+        walk_star(
+            w,
+            Substitution([
+              {x: u},
+              {z: y},
+              {
+                w: [x, 'e', z]
+              },
+              {u: 'c'}
+            ])),
+        ['c', 'e', y]);
     expect(
         walk_star(
             w,
@@ -411,17 +408,61 @@ void main() {
               {u: 'c'},
               {v: 'q'}
             ])),
-        ['c', 'q', 'e', y]);
+        [
+          ['c', 'q'],
+          'e',
+          y
+        ]);
+  });
+
+  test('Take Tests', () {
+    final take1 = disj2(mEquals({'olive': y}, {x: 'apple'}),
+        mEquals({'oil': y}, {x: 'panda'}))(empty_s);
+    final takeResult = [
+      Substitution([
+        {x: 'olive'},
+        {y: 'apple'}
+      ]),
+      Substitution([
+        {x: 'oil'},
+        {y: 'panda'}
+      ])
+    ];
+    expect(take_inf(2, take1), takeResult);
+    expect(take_inf(20, take1), takeResult);
   });
 
   test('Reify Tests', () {
+    final reify1 = run_goal(5, disj2(mEquals('olive', x), mEquals('oil', x)));
+    expect(reify(x)(reify1[0]), 'olive');
+    expect(reify(x)(reify1[1]), 'oil');
     expect(
-        run_goal(
-            10,
-            reify(disj2(
-                mEquals(MVar('olive'), MVar('x')), mEquals(MVar('oil'), x)))),
-        false);
+        reify(x)(Substitution([
+          {x: y}
+        ])),
+        '_0');
+  });
+
+  test('Ifte Tests', () {
+    expect(
+        ifte(mEquals(x, 'butterfly'), mEquals(u, 'cat'), mEquals(v, 'dog'))(
+            Substitution.empty()),
+        [
+          Substitution([
+            {x: 'butterfly'},
+            {u: 'cat'}
+          ])
+        ]);
+    expect(
+        ifte(mEquals(x, 'butterfly'), mEquals(u, 'cat'), mEquals(v, 'dog'))(
+            Substitution([
+          {x: 'lemon'}
+        ])),
+        [
+          Substitution([
+            {x: 'lemon'},
+            {v: 'dog'}
+          ])
+        ]);
   });
 }
-
-// [['olive', 'oil'], ['y', 'y'], ['z', 'z'], ['u', 'u'], ['v', 'v'], ['w', 'w']]
