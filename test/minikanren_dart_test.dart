@@ -66,7 +66,7 @@ void main() {
                 MVar('w'): ['x', 'e', MVar('z')]
               }
             ])),
-        ['x', 'e', 'a']);
+        ['x', 'e', z]);
     expect(
         walk(
             w,

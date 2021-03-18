@@ -1,15 +1,35 @@
 //import 'package:minikanren_dart/minikanren_dart.dart' as minikanren_dart;
 
 import 'package:minikanren_dart/minikanren_dart.dart';
+import 'package:minikanren_dart/mk_interface.dart';
 
 //import '../lib/minikanren_dart.dart';
 
 main(List<String> arguments) {
-  print('Hello world:!');
-  print(mEquals({2: MVar('x')}, {2: 3})(empty_s));
-  print(mEquals({MVar('y'): 3}, {2: 3})(Substitution([
-    {MVar('x'): 3}
-  ])));
+  Function nullo(dynamic x) => defrel([mEquals([], x)]);
+  Function conso(dynamic x, dynamic y, dynamic xy) => defrel([
+        mEquals([x, y], xy)
+      ]);
+  Function appendo(dynamic l, dynamic t, dynamic out) => defrel([
+        condE([
+          nullo(l),
+          fresh([
+            'a',
+            'd',
+            'res'
+          ], [
+            conso('a', 'd', l),
+            appendo('d', t, 'res'),
+            conso('a', 'res', out)
+          ])
+        ], [
+          mEquals(t, out)
+        ])
+      ]);
+
+  print(run_star('q', [
+    appendo([1, 2, 3], 'q', [1, 2, 3, 4, 5, 6])
+  ]));
 
 /*
 Implementation of appendo
@@ -22,49 +42,16 @@ Racket Code:
            (appendo d t res)
            (conso a res out)))))
 
-with the following functions: 
-
-(defrel (conso x xs xxs) (== (cons x xs) xxs))
-
-(defrel (nullo x) (== '() x))
-
-And Syntax Rules: 
-
-(define-syntax defrel
-  (syntax-rules ()
-    ((defrel (name x ...) g ...)
-     (define (name x ...)
-       (lambda (s)
-         (lambda ()
-           ((conj g ...) s)))))))
-
-(define-syntax conde
-  (syntax-rules ()
-    ((conde (g ...) ...)
-     (disj (conj g ...) ...))))
-
-(define-syntax run*
-  (syntax-rules ()
-    ((run* q g ...) (run #f q g ...))))
-
-(define-syntax run
-  (syntax-rules ()
-    ((run n (x0 x ...) g ...)
-     (run n q (fresh (x0 x ...)
-                (== `(,x0 ,x ...) q) g ...)))
-    ((run n q g ...)
-     (let ((q (var 'q)))
-       (map (reify q)
-         (run-goal n (conj g ...)))))))
-
 (run* (q) (appendo '(1 2 3) q '(1 2 3 4 5 6))
 
 */
 
-// Kapitel 7 Seite 85:
+// Implementation Chapter 7 bit-XOR
 
-// bit-or
-// bit-xor
-// bit-and
-// bit-nand
+Function bit_xoro(int x, int y, int r){
+  condE([mEquals(x, 0),mEquals(x, 1)], [mEquals(r, 0), mEquals(r, 1)])
+}
+
+// runstar (x,y) (bit-xoro x y 0) should return [[0,0], [1,1]]
+
 }
