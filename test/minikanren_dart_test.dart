@@ -1,4 +1,5 @@
 import 'package:minikanren_dart/minikanren_dart.dart';
+import 'package:minikanren_dart/mk_interface.dart';
 import 'package:test/test.dart';
 
 //import '../lib/minikanren_dart.dart';
@@ -313,6 +314,16 @@ void main() {
         {x: y}
       ])
     ]);
+    expect(mEquals(x, 'olive')(Substitution.empty()), [
+      Substitution([
+        {x: 'olive'}
+      ])
+    ]);
+    expect(
+        mEquals(x, 'olive')(Substitution([
+          {x: 'oil'}
+        ])),
+        []);
     expect(s_succeed()(Substitution.empty()), [Substitution.empty()]);
     expect(mEquals(s_succeed(), u_fail())(Substitution.empty()), []);
     expect(mEquals(u_fail(), u_fail())(Substitution.empty()), []);
@@ -417,7 +428,7 @@ void main() {
 
   test('Take Tests', () {
     final take1 = disj2(mEquals({'olive': y}, {x: 'apple'}),
-        mEquals({'oil': y}, {x: 'panda'}))(empty_s);
+        mEquals({'oil': y}, {x: 'panda'}))(Substitution.empty());
     final takeResult = [
       Substitution([
         {x: 'olive'},
@@ -464,5 +475,100 @@ void main() {
             {v: 'dog'}
           ])
         ]);
+  });
+
+  test('Disj Tests', () {
+    expect(
+        disj([mEquals('olive', x), mEquals('oil', x)])(Substitution.empty()), [
+      Substitution([
+        {x: 'olive'}
+      ]),
+      Substitution([
+        {x: 'oil'}
+      ]),
+    ]);
+    expect(
+        disj([mEquals('olive', x), mEquals('oil', x), mEquals('pan', x)])(
+            Substitution.empty()),
+        [
+          Substitution([
+            {x: 'olive'}
+          ]),
+          Substitution([
+            {x: 'oil'}
+          ]),
+          Substitution([
+            {x: 'pan'}
+          ]),
+        ]);
+    expect(disj([]), u_fail);
+  });
+
+  test('Conj Tests', () {
+    expect(
+        conj([
+          mEquals({2: x}, {2: 3}),
+          mEquals({y: 3}, {2: 3})
+        ])(Substitution.empty()),
+        [
+          Substitution([
+            {x: 3},
+            {y: 2}
+          ])
+        ]);
+    expect(
+        conj([
+          mEquals({2: x}, {2: 3}),
+          mEquals({y: 3}, {2: 3}),
+          mEquals({z: 4}, {1: 4})
+        ])(Substitution.empty()),
+        [
+          Substitution([
+            {x: 3},
+            {y: 2},
+            {z: 1}
+          ])
+        ]);
+    expect(conj([]), s_succeed);
+  });
+  test('Run_Star Tests', () {
+    expect(run_star('q', [u_fail()]), []);
+    expect(run_star('q', [s_succeed()]), ['_0']);
+    expect(run_star('x', [mEquals(x, x)]), ['_0']);
+    expect(run_star('x', [mEquals([], [])]), ['_0']);
+    expect(run_star('x', [mEquals(x, 'pea')]), ['pea']);
+    expect(run_star('x', [disj2(mEquals(x, 'olive'), mEquals(x, 'oil'))]),
+        ['olive', 'oil']);
+    expect(
+        run_star('x',
+            [disj2(conj2(mEquals(x, 'olive'), u_fail()), mEquals(x, 'oil'))]),
+        ['oil']);
+  });
+
+  test('Conde Tests', () {
+    expect(
+        run_star('x', [
+          condE([mEquals(x, 'olive'), mEquals(y, 'oil')])
+        ]),
+        ['olive']);
+    expect(
+        run_star('y', [
+          condE([mEquals(x, 'olive'), mEquals(y, 'oil')])
+        ]),
+        ['oil']);
+    expect(
+        run_star('x', [
+          condE([
+            mEquals(x, 'olive'),
+            mEquals(y, 'oil'),
+            mEquals(x, 'pea'),
+            mEquals(y, 'pan')
+          ])
+        ]),
+        ['olive', 'pea']);
+  });
+
+  test('Defrel Tests', () {
+    expect(run_star('q', [u_fail()]), []);
   });
 }

@@ -86,8 +86,8 @@ class Substitution {
 }
 
 // empty-list constant
-// todo const?
-Substitution empty_s = Substitution.empty();
+// TODO const?
+//Substitution empty_s = Substitution.empty();
 
 // returns the association pair
 dynamic assv(MVar val, Substitution sub) {
@@ -215,18 +215,21 @@ dynamic append_inf(List s, List t) {
   if (s.isEmpty) return t;
   if (s is List && s.isNotEmpty) {
     var recursion = append_inf(s.sublist(1), t);
-    if (recursion is List && recursion.isNotEmpty) recursion = recursion.first;
+    //if (recursion is List && recursion.isNotEmpty) recursion = recursion.first;
     if (recursion is List && recursion.isEmpty) return [s.elementAt(0)];
-    return [s.elementAt(0), recursion];
+    recursion.insert(0, s.elementAt(0));
+    return recursion;
     // sublist(1) removes first element
   }
   return () => append_inf(t, s);
 }
 
 // models or and returns a stream
-dynamic disj2(Function g1, Function g2) {
+dynamic disj2(Function g1, dynamic g2) {
   return (Substitution s) {
     Substitution sCopy = Substitution.clone(s);
+    // needed for recursion of disj...
+    if (g2 is List) return append_inf(g1(s), g2);
     return append_inf(g1(s), g2(sCopy));
   };
 }
@@ -286,14 +289,15 @@ dynamic walk_star(dynamic val, Substitution sub) {
 }
 
 // number n and stream s, produces at most n values
-dynamic take_inf(int n, dynamic s) {
-  if (n < 1 || (s is List && s.isEmpty)) return [];
+dynamic take_inf(dynamic n, dynamic s) {
+  if ((n is int && n < 1) || (s is List && s.isEmpty)) return [];
   if (s is List && s.isNotEmpty) {
-    var recursion = take_inf(n - 1, s.sublist(1));
+    if (n is int) n--;
+    dynamic recursion = take_inf(n, s.sublist(1));
     if (recursion is List && recursion.isEmpty) return s.first;
     return [s.first, recursion];
   }
-  return take_inf(n, [s]);
+  return take_inf(n, [s]); // this is actually call s...
 }
 
 // expects value and empty reified name substitution
@@ -302,7 +306,9 @@ dynamic reify_s(dynamic val, Substitution reisub) {
 
   if (isMVar(walkedVal)) {
     List<Map<MVar, dynamic>> newSub = reisub.associations;
-    newSub.add({val: reify_name(reisub.associations.length - 1)});
+    int length = reisub.associations.length;
+    reisub.associations.length > 0 ? length = length - 1 : length = 0;
+    newSub.add({val: reify_name(length)});
     return Substitution(newSub);
   } else if (walkedVal is Map) {
     return [
@@ -318,14 +324,14 @@ dynamic reify_s(dynamic val, Substitution reisub) {
 Function reify(dynamic val) {
   return (Substitution sub) {
     dynamic walkedVal = walk_star(val, sub);
-    dynamic reifyVal = reify_s(walkedVal, empty_s);
+    dynamic reifyVal = reify_s(walkedVal, Substitution.empty());
     return walk_star(walkedVal, reifyVal);
   };
 }
 
 //
 dynamic run_goal(dynamic n, Function g) {
-  return take_inf(n, g(empty_s));
+  return take_inf(n, g(Substitution.empty()));
 }
 
 // gets goals and produces a goal

@@ -22,14 +22,17 @@ main(List<String> arguments) {
             appendo('d', t, 'res'),
             conso('a', 'res', out)
           ])
-        ], [
-          mEquals(t, out)
         ])
       ]);
 
-  print(run_star('q', [
-    appendo([1, 2, 3], 'q', [1, 2, 3, 4, 5, 6])
-  ]));
+  print(run_star('x', [nullo('x')])); // should return []
+  print(run_star('x', [nullo([])])); // should return ['_0']
+  print(run_star('x', [nullo([])])); // should return ['_0']
+  //     expect(run_star('x', [mEquals([], [])]), ['_0']);
+
+  //print(run_star('q', [
+  //  appendo([1, 2, 3], 'q', [1, 2, 3, 4, 5, 6])
+  //]));
 
 /*
 Implementation of appendo
@@ -46,12 +49,16 @@ Racket Code:
 
 */
 
-// Implementation Chapter 7 bit-XOR
+// Usage: Teacup
+// defrel (teacupo t)
+// disj2 (mEquals 'tea t) (mEquals 'cup t)
 
-Function bit_xoro(int x, int y, int r){
-  condE([mEquals(x, 0),mEquals(x, 1)], [mEquals(r, 0), mEquals(r, 1)])
-}
+// Implementation Chapter 7 bit-XOR
+// Lines are CONDS and can take 3 args!
+
+  //Function bit_xoro(int x, int y, int r) {
+  //  condE([mEquals(x, 0), mEquals(x, 1)]);
+  //}
 
 // runstar (x,y) (bit-xoro x y 0) should return [[0,0], [1,1]]
-
 }

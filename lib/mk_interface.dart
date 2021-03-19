@@ -5,27 +5,14 @@ import 'minikanren_dart.dart';
 Function disj(List<Function> input) {
   if (input.isEmpty) return u_fail;
   if (input.length == 1) return input[0];
-  return disj2(input[0], disj(input.sublist(1)));
-/*
-(define-syntax disj
-  (syntax-rules ()
-    ((disj) fail)
-    ((disj g) g)
-    ((disj g0 g ...) (disj2 g0 (disj g ...)))))
-*/
+  dynamic recursion = disj(input.sublist(1));
+  return disj2(input[0], recursion);
 }
 
 Function conj(List<Function> input) {
   if (input.isEmpty) return s_succeed;
   if (input.length == 1) return input[0];
   return conj2(input[0], conj(input.sublist(1)));
-  /*
-(define-syntax conj
-  (syntax-rules ()
-    ((conj) succeed)
-    ((conj g) g)
-    ((conj g0 g ...) (conj2 g0 (conj g ...)))))
-    */
 }
 
 Function defrel(List<Function> input) {
@@ -33,7 +20,6 @@ Function defrel(List<Function> input) {
     return () => conj(input)(sub);
   };
 /*
-(defrel (conso x xs xxs) (== (cons x xs) xxs))
 (define-syntax defrel
   (syntax-rules ()
     ((defrel (name x ...) g ...)
@@ -44,31 +30,35 @@ Function defrel(List<Function> input) {
            */
 }
 
-dynamic condE(List<Function> input, List<Function> output) {
-  return disj([conj(input)]); // TODO Add Output?
-/*
-(define-syntax conde
-  (syntax-rules ()
-    ((conde (g ...) ...)
-     (disj (conj g ...) ...))))
-*/
+dynamic condE(List<Function> input) {
+  List<Function> conds = [];
+
+  for (int i = 0; i < input.length; i = i + 2) {
+    if (i < input.length - 1)
+      conds.add(conj([input[i], input[i + 1]]));
+    else
+      conds.add(input[i]);
+  }
+  return disj(conds);
 }
 
 dynamic run_star(String q, List<Function> g) {
+  //TODO: support multiple qs!
   return mRun(false, q, g);
-  /*
-(define-syntax run*
-  (syntax-rules ()
-    ((run* q g ...) (run #f q g ...))))
-*/
 }
 
 dynamic mRun(dynamic n, String q, List<Function> g) {
-  final runGoal = run_goal(n, conj(g));
+  dynamic runGoal = run_goal(n, conj(g));
   MVar mQ = MVar(q);
-  List result;
-  for (int i = 0; i < runGoal.length; i++) {
-    result[i] = reify(mQ)(runGoal[i]);
+  List result = [];
+  if (runGoal is List && runGoal.isNotEmpty) {
+    for (int i = 0; i < runGoal.length; i++) {
+      result.add(reify(mQ)(runGoal[i]));
+    }
+  } else if (runGoal is Substitution) {
+    result = [reify(mQ)(runGoal)];
+  } else {
+    result = [];
   }
   return result;
 /*
@@ -84,9 +74,10 @@ dynamic mRun(dynamic n, String q, List<Function> g) {
 */
 }
 
-dynamic fresh(List<dynamic> x, List<Function> g) {
+dynamic fresh(List<String> x, List<Function> g) {
   if (x.isEmpty) return conj(g);
   return call_fresh(x[0], (var x0) => fresh(x.sublist(1), g));
+
   /*
 (define-syntax fresh
   (syntax-rules ()
