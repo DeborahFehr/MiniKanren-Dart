@@ -23,12 +23,6 @@ void main() {
     expect(x.isEqual(y), false);
   });
 
-// TODO ?
-  test('Substitution Tests', () {
-    expect(isMVar(7), false);
-    expect(isMVar(7), false);
-  });
-
   test('Walk Tests', () {
     expect(
         walk(
@@ -566,9 +560,5 @@ void main() {
           ])
         ]),
         ['olive', 'pea']);
-  });
-
-  test('Defrel Tests', () {
-    expect(run_star('q', [u_fail()]), []);
   });
 }

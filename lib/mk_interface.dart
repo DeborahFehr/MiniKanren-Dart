@@ -19,15 +19,6 @@ Function defrel(List<Function> input) {
   return (Substitution sub) {
     return () => conj(input)(sub);
   };
-/*
-(define-syntax defrel
-  (syntax-rules ()
-    ((defrel (name x ...) g ...)
-     (define (name x ...)
-       (lambda (s)
-         (lambda ()
-           ((conj g ...) s)))))))
-           */
 }
 
 dynamic condE(List<Function> input) {
@@ -61,30 +52,9 @@ dynamic mRun(dynamic n, String q, List<Function> g) {
     result = [];
   }
   return result;
-/*
-(define-syntax run
-  (syntax-rules ()
-    ((run n (x0 x ...) g ...)
-     (run n q (fresh (x0 x ...)
-                (== `(,x0 ,x ...) q) g ...)))
-    ((run n q g ...)
-     (let ((q (var 'q)))
-       (map (reify q)
-         (run-goal n (conj g ...)))))))
-*/
 }
 
 dynamic fresh(List<String> x, List<Function> g) {
   if (x.isEmpty) return conj(g);
   return call_fresh(x[0], (var x0) => fresh(x.sublist(1), g));
-
-  /*
-(define-syntax fresh
-  (syntax-rules ()
-    ((fresh () g ...) (conj g ...))
-    ((fresh (x0 x ...) g ...)
-     (call/fresh 'x_0
-       (lambda (x0)
-         (fresh (x ...) g ...))))))
-         */
 }

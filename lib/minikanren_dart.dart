@@ -38,8 +38,6 @@ class Substitution {
   List<Map<MVar, dynamic>> associations =
       <Map<MVar, dynamic>>[]; // create List of Associations
 
-  // TODO: Frame XYZ: cannot containt 2 associations with same
-  // key, so check this via occurs
   Substitution(List<Map<MVar, dynamic>> l) {
     this.associations = l;
   }
@@ -64,10 +62,10 @@ class Substitution {
       if (other.associations.length != this.associations.length) return false;
       bool result = true;
       for (int i = 0; i < this.associations.length; i++) {
-        MVar thisKey = this.associations[i].keys.elementAt(0);
-        MVar otherKey = other.associations[i].keys.elementAt(0);
-        dynamic thisVal = this.associations[i].values.elementAt(0);
-        dynamic otherVal = other.associations[i].values.elementAt(0);
+        MVar thisKey = this.associations[i].keys.first;
+        MVar otherKey = other.associations[i].keys.first;
+        dynamic thisVal = this.associations[i].values.first;
+        dynamic otherVal = other.associations[i].values.first;
 
         if (!thisKey.isEqual(otherKey)) result = false;
         if (isMVar(thisVal)) {
@@ -85,15 +83,13 @@ class Substitution {
   }
 }
 
-// empty-list constant
-// TODO const?
-//Substitution empty_s = Substitution.empty();
+// empty-list constant, see report for details
+final Substitution empty_s = Substitution.empty();
 
 // returns the association pair
 dynamic assv(MVar val, Substitution sub) {
   for (int i = 0; i < sub.associations.length; i++) {
-    if (val.isEqual(sub.associations[i].keys.elementAt(0)))
-      return sub.associations[i];
+    if (val.isEqual(sub.associations[i].keys.first)) return sub.associations[i];
   }
   return false;
 }
@@ -104,13 +100,12 @@ dynamic walk(dynamic val, Substitution sub) {
   if (isMVar(val)) {
     assoc = assv(val, sub);
     if (assoc is Map) {
-      var recursion = walk(assoc.values.elementAt(0), sub);
+      var recursion = walk(assoc.values.first, sub);
       if (recursion == false) {
-        return assoc.values.elementAt(0);
+        return assoc.values.first;
       } else {
         return recursion;
       }
-      //}
     } else {
       assoc = val;
     }
@@ -124,8 +119,8 @@ dynamic occurs(MVar key, dynamic val, Substitution sub) {
   if (isMVar(walkVal)) {
     return walkVal.isEqual(key);
   } else if (walkVal is Map) {
-    return (occurs(key, walkVal.keys.elementAt(0), sub) ||
-        occurs(key, walkVal.values.elementAt(0), sub));
+    return (occurs(key, walkVal.keys.first, sub) ||
+        occurs(key, walkVal.values.first, sub));
   }
   // If val is a list, check all List values (compare Frame XYZ)
   else if (walkVal is List) {
@@ -162,19 +157,17 @@ dynamic unify(dynamic u, dynamic v, Substitution sub) {
   if (isMVar(walkU)) return ext_s(walkU, walkV, sub);
   if (isMVar(walkV)) return ext_s(walkV, walkU, sub);
   if (walkU is Map && walkV is Map) {
-    dynamic unifyCar =
-        unify(walkU.keys.elementAt(0), walkV.keys.elementAt(0), sub);
+    dynamic unifyCar = unify(walkU.keys.first, walkV.keys.first, sub);
     if (unifyCar != false) {
-      return unify(
-          walkU.values.elementAt(0), walkV.values.elementAt(0), unifyCar);
+      return unify(walkU.values.first, walkV.values.first, unifyCar);
     }
   }
   if (walkU is Substitution && walkV is Substitution) {
-    dynamic unifyCar = unify(walkU.associations[0].keys.elementAt(0),
-        walkV.associations[0].keys.elementAt(0), sub);
+    dynamic unifyCar = unify(walkU.associations[0].keys.first,
+        walkV.associations[0].keys.first, sub);
     if (unifyCar != false) {
-      return unify(walkU.associations[0].values.elementAt(0),
-          walkV.associations[0].values.elementAt(0), unifyCar);
+      return unify(walkU.associations[0].values.first,
+          walkV.associations[0].values.first, unifyCar);
     }
   }
 
@@ -216,8 +209,8 @@ dynamic append_inf(List s, List t) {
   if (s is List && s.isNotEmpty) {
     var recursion = append_inf(s.sublist(1), t);
     //if (recursion is List && recursion.isNotEmpty) recursion = recursion.first;
-    if (recursion is List && recursion.isEmpty) return [s.elementAt(0)];
-    recursion.insert(0, s.elementAt(0));
+    if (recursion is List && recursion.isEmpty) return [s.first];
+    recursion.insert(0, s.first);
     return recursion;
     // sublist(1) removes first element
   }
@@ -238,7 +231,7 @@ dynamic disj2(Function g1, dynamic g2) {
 dynamic append_map_inf(Function g, dynamic s) {
   if (s is List && s.isEmpty) return [];
   if (s is List && s.isNotEmpty) {
-    return append_inf(g(s.elementAt(0)), append_map_inf(g, s.sublist(1)));
+    return append_inf(g(s.first), append_map_inf(g, s.sublist(1)));
   }
   return () => append_map_inf(g, [s]);
 }
