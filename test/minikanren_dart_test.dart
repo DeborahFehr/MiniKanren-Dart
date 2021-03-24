@@ -2,8 +2,6 @@ import 'package:minikanren_dart/minikanren_dart.dart';
 import 'package:minikanren_dart/mk_interface.dart';
 import 'package:test/test.dart';
 
-//import '../lib/minikanren_dart.dart';
-
 // Thanks @ ChrisH for providing test cases!
 
 void main() {
@@ -13,6 +11,7 @@ void main() {
   final u = MVar('u');
   final v = MVar('v');
   final w = MVar('w');
+  final a = MVar('a');
   final varCopy = MVar('x');
 
   test('Var Tests', () {
@@ -28,37 +27,37 @@ void main() {
         walk(
             z,
             Substitution([
-              {MVar('z'): 'a'},
-              {MVar('x'): 'w'},
-              {MVar('y'): 'z'}
+              {z: 'a'},
+              {x: 'w'},
+              {y: 'z'}
             ])),
         'a');
     expect(
         walk(
             y,
             Substitution([
-              {MVar('z'): 'a'},
-              {MVar('x'): 'w'},
-              {MVar('y'): MVar('z')}
+              {z: 'a'},
+              {x: 'w'},
+              {y: z}
             ])),
         'a');
     expect(
         walk(
             x,
             Substitution([
-              {MVar('z'): 'a'},
-              {MVar('x'): 'w'},
-              {MVar('y'): 'z'}
+              {z: 'a'},
+              {x: 'w'},
+              {y: 'z'}
             ])),
         'w');
     expect(
         walk(
             x,
             Substitution([
-              {MVar('z'): 'a'},
-              {MVar('x'): MVar('w')},
+              {z: 'a'},
+              {x: w},
               {
-                MVar('w'): ['x', 'e', MVar('z')]
+                w: ['x', 'e', z]
               }
             ])),
         ['x', 'e', z]);
@@ -66,10 +65,10 @@ void main() {
         walk(
             w,
             Substitution([
-              {MVar('x'): 'b'},
-              {MVar('z'): 'y'},
+              {x: 'b'},
+              {z: 'y'},
               {
-                MVar('w'): ['x', 'e', 'z']
+                w: ['x', 'e', 'z']
               }
             ])),
         ['x', 'e', 'z']);
@@ -77,7 +76,7 @@ void main() {
         walk(
             y,
             Substitution([
-              {MVar('y'): x}
+              {y: x}
             ])),
         x);
   });
@@ -135,7 +134,7 @@ void main() {
             x,
             Substitution([
               {
-                x: {MVar('a'): y}
+                x: {a: y}
               },
               {z: w}
             ])),
@@ -146,7 +145,7 @@ void main() {
             {x: 'b'},
             Substitution([
               {
-                x: {MVar('a'): y}
+                x: {a: y}
               },
               {z: w}
             ])),
@@ -157,7 +156,7 @@ void main() {
             {'a': 'b'},
             Substitution([
               {
-                x: {MVar('a'): y}
+                x: {a: y}
               },
               {z: w}
             ])),
@@ -211,9 +210,9 @@ void main() {
           {x: 1}
         ]));
     expect(
-        ext_s(x, MVar('1'), Substitution.empty()),
+        ext_s(x, a, Substitution.empty()),
         Substitution([
-          {x: MVar('1')}
+          {x: a}
         ]));
   });
 
@@ -525,33 +524,40 @@ void main() {
         ]);
     expect(conj([]), s_succeed);
   });
+
   test('Run_Star Tests', () {
-    expect(run_star('q', [u_fail()]), []);
-    expect(run_star('q', [s_succeed()]), ['_0']);
-    expect(run_star('x', [mEquals(x, x)]), ['_0']);
-    expect(run_star('x', [mEquals([], [])]), ['_0']);
-    expect(run_star('x', [mEquals(x, 'pea')]), ['pea']);
-    expect(run_star('x', [disj2(mEquals(x, 'olive'), mEquals(x, 'oil'))]),
+    expect(run_star(['q'], [u_fail()]), []);
+    expect(run_star(['q'], [s_succeed()]), ['_0']);
+    expect(run_star(['x'], [mEquals(x, x)]), ['_0']);
+    expect(run_star(['x'], [mEquals([], [])]), ['_0']);
+    expect(run_star(['x'], [mEquals(x, 'pea')]), ['pea']);
+    expect(run_star(['x'], [disj2(mEquals(x, 'olive'), mEquals(x, 'oil'))]),
         ['olive', 'oil']);
     expect(
-        run_star('x',
+        run_star(['x'],
             [disj2(conj2(mEquals(x, 'olive'), u_fail()), mEquals(x, 'oil'))]),
         ['oil']);
   });
 
   test('Conde Tests', () {
     expect(
-        run_star('x', [
+        run_star([
+          'x'
+        ], [
           condE([mEquals(x, 'olive'), mEquals(y, 'oil')])
         ]),
         ['olive']);
     expect(
-        run_star('y', [
+        run_star([
+          'y'
+        ], [
           condE([mEquals(x, 'olive'), mEquals(y, 'oil')])
         ]),
         ['oil']);
     expect(
-        run_star('x', [
+        run_star([
+          'x'
+        ], [
           condE([
             mEquals(x, 'olive'),
             mEquals(y, 'oil'),

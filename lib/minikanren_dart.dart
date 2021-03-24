@@ -1,6 +1,6 @@
 import 'package:collection/collection.dart';
 
-// Implementation of Variable
+// An MVar is a miniKanren Variable
 class MVar {
   final String id;
 
@@ -29,14 +29,12 @@ bool isMVar(Object obj) {
 }
 
 // An Association is a pair where the first Value is a
-// Variable and the second one can be anything
+// MVar and the second one can be anything
 // Association: Map<Var, Dynamic>
 
 // A substitution is a list of associations
 class Substitution {
-  // define List Type here
-  List<Map<MVar, dynamic>> associations =
-      <Map<MVar, dynamic>>[]; // create List of Associations
+  List<Map<MVar, dynamic>> associations = <Map<MVar, dynamic>>[];
 
   Substitution(List<Map<MVar, dynamic>> l) {
     this.associations = l;
@@ -56,6 +54,7 @@ class Substitution {
 
   Substitution.clone(Substitution sub) : this(new List.from(sub.associations));
 
+  // override comparison to allow for comparisons of associations
   @override
   bool operator ==(other) {
     if (other is Substitution) {
@@ -86,7 +85,6 @@ class Substitution {
 // empty-list constant, see report for details
 final Substitution empty_s = Substitution.empty();
 
-// returns the association pair
 dynamic assv(MVar val, Substitution sub) {
   for (int i = 0; i < sub.associations.length; i++) {
     if (val.isEqual(sub.associations[i].keys.first)) return sub.associations[i];
@@ -94,7 +92,6 @@ dynamic assv(MVar val, Substitution sub) {
   return false;
 }
 
-/// Returns the value of an association
 dynamic walk(dynamic val, Substitution sub) {
   dynamic assoc = val;
   if (isMVar(val)) {
@@ -113,7 +110,6 @@ dynamic walk(dynamic val, Substitution sub) {
   return assoc;
 }
 
-// checks if a cycle could appear in the substitution
 dynamic occurs(MVar key, dynamic val, Substitution sub) {
   var walkVal = walk(val, sub);
   if (isMVar(walkVal)) {
@@ -121,9 +117,7 @@ dynamic occurs(MVar key, dynamic val, Substitution sub) {
   } else if (walkVal is Map) {
     return (occurs(key, walkVal.keys.first, sub) ||
         occurs(key, walkVal.values.first, sub));
-  }
-  // If val is a list, check all List values (compare Frame XYZ)
-  else if (walkVal is List) {
+  } else if (walkVal is List) {
     bool valInList = false;
     for (int i = 0; i < walkVal.length; i++) {
       if (occurs(key, walkVal.elementAt(i), sub)) {
@@ -135,7 +129,6 @@ dynamic occurs(MVar key, dynamic val, Substitution sub) {
   return false;
 }
 
-// extends the Substitution with a new Association
 dynamic ext_s(MVar key, dynamic val, Substitution sub) {
   if (occurs(key, val, sub) == true) {
     return false;
@@ -146,7 +139,6 @@ dynamic ext_s(MVar key, dynamic val, Substitution sub) {
   }
 }
 
-// unifies two lists of substitutions
 dynamic unify(dynamic u, dynamic v, Substitution sub) {
   var walkU = walk(u, sub);
   var walkV = walk(v, sub);
@@ -202,32 +194,26 @@ Function mEquals(dynamic u, dynamic v) {
   };
 }
 
-// append-inf expects streams and produces a stream
-// no List<Substitution> as empty list cannot be passed
+// no List<Substitution> as empty list can be passed
 dynamic append_inf(List s, List t) {
   if (s.isEmpty) return t;
   if (s is List && s.isNotEmpty) {
     var recursion = append_inf(s.sublist(1), t);
-    //if (recursion is List && recursion.isNotEmpty) recursion = recursion.first;
     if (recursion is List && recursion.isEmpty) return [s.first];
     recursion.insert(0, s.first);
     return recursion;
-    // sublist(1) removes first element
   }
   return () => append_inf(t, s);
 }
 
-// models or and returns a stream
 dynamic disj2(Function g1, dynamic g2) {
   return (Substitution s) {
     Substitution sCopy = Substitution.clone(s);
-    // needed for recursion of disj...
     if (g2 is List) return append_inf(g1(s), g2);
     return append_inf(g1(s), g2(sCopy));
   };
 }
 
-//
 dynamic append_map_inf(Function g, dynamic s) {
   if (s is List && s.isEmpty) return [];
   if (s is List && s.isNotEmpty) {
@@ -236,23 +222,18 @@ dynamic append_map_inf(Function g, dynamic s) {
   return () => append_map_inf(g, [s]);
 }
 
-// models and and returns a stream
 dynamic conj2(Function g1, Function g2) {
   return (Substitution s) => append_map_inf(g2, g1(s));
 }
 
-//
 dynamic call_fresh(dynamic name, Function f) {
   return f(MVar(name));
 }
 
-// returns reified value (underscore natural number)
-// strings are naturally immutable in dart
 dynamic reify_name(int n) {
   return "_" + n.toString();
 }
 
-//
 dynamic walk_star(dynamic val, Substitution sub) {
   dynamic walkedVal = walk(val, sub);
 
@@ -281,7 +262,6 @@ dynamic walk_star(dynamic val, Substitution sub) {
   return walkedVal;
 }
 
-// number n and stream s, produces at most n values
 dynamic take_inf(dynamic n, dynamic s) {
   if ((n is int && n < 1) || (s is List && s.isEmpty)) return [];
   if (s is List && s.isNotEmpty) {
@@ -290,10 +270,9 @@ dynamic take_inf(dynamic n, dynamic s) {
     if (recursion is List && recursion.isEmpty) return s.first;
     return [s.first, recursion];
   }
-  return take_inf(n, [s]); // this is actually call s...
+  return take_inf(n, [s]);
 }
 
-// expects value and empty reified name substitution
 dynamic reify_s(dynamic val, Substitution reisub) {
   dynamic walkedVal = walk(val, reisub);
 
@@ -313,7 +292,6 @@ dynamic reify_s(dynamic val, Substitution reisub) {
   }
 }
 
-//
 Function reify(dynamic val) {
   return (Substitution sub) {
     dynamic walkedVal = walk_star(val, sub);
@@ -322,12 +300,10 @@ Function reify(dynamic val) {
   };
 }
 
-//
 dynamic run_goal(dynamic n, Function g) {
   return take_inf(n, g(Substitution.empty()));
 }
 
-// gets goals and produces a goal
 dynamic ifte(Function g1, Function g2, Function g3) {
   return (Substitution sub) {
     Substitution sCopy = Substitution.clone(sub);

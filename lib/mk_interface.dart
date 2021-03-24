@@ -23,7 +23,6 @@ Function defrel(List<Function> input) {
 
 dynamic condE(List<Function> input) {
   List<Function> conds = [];
-
   for (int i = 0; i < input.length; i = i + 2) {
     if (i < input.length - 1)
       conds.add(conj([input[i], input[i + 1]]));
@@ -33,23 +32,27 @@ dynamic condE(List<Function> input) {
   return disj(conds);
 }
 
-dynamic run_star(String q, List<Function> g) {
-  //TODO: support multiple qs!
+dynamic run_star(List<String> q, List<Function> g) {
   return mRun(false, q, g);
 }
 
-dynamic mRun(dynamic n, String q, List<Function> g) {
+dynamic mRun(dynamic n, List<String> q, List<Function> g) {
   dynamic runGoal = run_goal(n, conj(g));
-  MVar mQ = MVar(q);
   List result = [];
-  if (runGoal is List && runGoal.isNotEmpty) {
-    for (int i = 0; i < runGoal.length; i++) {
-      result.add(reify(mQ)(runGoal[i]));
+  for (int i = 0; i < q.length; i++) {
+    MVar mQ = MVar(q[i]);
+    if (runGoal is List && runGoal.isNotEmpty) {
+      List interim = [];
+      for (int x = 0; x < runGoal.length; x++) {
+        interim.add(reify(mQ)(runGoal[x]));
+      }
+      if (q.length > 1)
+        result.add(interim);
+      else
+        result = interim;
+    } else if (runGoal is Substitution) {
+      result.add(reify(mQ)(runGoal));
     }
-  } else if (runGoal is Substitution) {
-    result = [reify(mQ)(runGoal)];
-  } else {
-    result = [];
   }
   return result;
 }

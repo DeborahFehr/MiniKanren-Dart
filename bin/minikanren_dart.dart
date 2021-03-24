@@ -42,7 +42,9 @@ main(List<String> arguments) {
   */
 
   print("Appendo Example Example");
-  print(run_star('x', [
+  print(run_star([
+    'x'
+  ], [
     appendo([1, 2, 3], MVar('x'), [1, 2, 3, 4, 5, 6])
   ])); // returns [[4, 5, 6]]
 
@@ -50,11 +52,11 @@ main(List<String> arguments) {
   Function teacupo(dynamic t) => disj([mEquals('tea', t), mEquals('cup', t)]);
 
   print("Teacupo Example");
-  print(run_star('t', [teacupo(MVar('t'))])); // returns [tea, cup]
-  print(run_star('t', [teacupo('tea')])); // returns [_0]
-  print(run_star('t', [teacupo('pie')])); // returns []
+  print(run_star(['t'], [teacupo(MVar('t'))])); // returns [tea, cup]
+  print(run_star(['t'], [teacupo('tea')])); // returns [_0]
+  print(run_star(['t'], [teacupo('pie')])); // returns []
 
-// Programming Problem based on Chapter 7 of the Reasoned Schemer
+// Programming Problem based on Chapter 7 of The Reasoned Schemer
 // "A bit too much"
 
 // bit-xoro based on Frame 7-5
@@ -70,10 +72,10 @@ main(List<String> arguments) {
       ]);
 
   print("Xoro Example");
-  print(run_star('x', [xoro(MVar('x'), 0, 0)])); // returns [0]
-  print(run_star('x', [xoro(MVar('x'), 0, 1)])); // returns [1]
-
-// runstar (x,y) (bit-xoro x y 0) should return [[0,0], [1,1]]
+  print(run_star(['x'], [xoro(MVar('x'), 0, 0)])); // returns [0]
+  print(run_star(['x'], [xoro(MVar('x'), 0, 1)])); // returns [1]
+  print(run_star(
+      ['x', 'y'], [xoro(MVar('x'), MVar('y'), 1)])); // returns [[0, 1], [1, 0]]
 
 // bit-xoro based on Frame 7-10
   Function ando(dynamic x, dynamic y, dynamic r) => condE([
@@ -88,9 +90,7 @@ main(List<String> arguments) {
       ]);
 
   print("Ando Example");
-  print(run_star('x', [ando(MVar('x'), 0, 0)])); // returns [0, 1]
-  print(run_star('x', [ando(MVar('x'), 0, 1)])); // returns []
-  print(run_star('x', [ando(MVar('x'), 1, 1)])); // returns [1]
+  print(run_star(['x'], [ando(MVar('x'), 0, 0)])); // returns [0, 1]
+  print(run_star(['x'], [ando(MVar('x'), 1, 1)])); // returns [1]
+  print(run_star(['x'], [ando(MVar('x'), 0, 1)])); // returns []
 }
-
-// TODO: ReadMe anpassen!
